@@ -124,3 +124,24 @@ def test_comfort_massimo_impedisce_boost():
     logica = Logica(Config(boost=RegoleBoost(temp_max_c=23)))
     pompa = StatoPompa(ts=GIORNO - timedelta(hours=1), modalita=Modalita.NORMALE, accesa=True, temp_ambiente_c=23.5)
     assert not logica.decidi(serie(GIORNO, 3), GIORNO, pompa).cambia
+
+
+def test_temperatura_casa_bticino_blocca_il_boost():
+    from domotica.config import RegoleBoost
+    logica = Logica(Config(boost=RegoleBoost(temp_max_c=22.5)))
+    assert not logica.decidi(serie(GIORNO, 3), GIORNO, temp_casa=22.6).cambia
+    assert logica.decidi(serie(GIORNO, 3), GIORNO, temp_casa=21.0).cambia
+
+
+def test_temperatura_casa_raggiunta_fa_uscire_dal_boost_subito():
+    from domotica.config import RegoleBoost
+    logica = Logica(Config(boost=RegoleBoost(temp_max_c=22.5)))
+    logica.registra_cambio(Modalita.BOOST, GIORNO - timedelta(minutes=5))
+    d = logica.decidi(serie(GIORNO, 3), GIORNO, temp_casa=22.5)
+    assert d.cambia and d.modalita == Modalita.NORMALE
+
+
+def test_senza_temperatura_restano_le_regole_solari():
+    from domotica.config import RegoleBoost
+    logica = Logica(Config(boost=RegoleBoost(temp_max_c=22.5)))
+    assert logica.decidi(serie(GIORNO, 3), GIORNO, temp_casa=None).cambia

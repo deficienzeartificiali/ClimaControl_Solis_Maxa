@@ -12,7 +12,8 @@ PICCO_PV_KW = 6.0
 CARICO_BASE_KW = 0.5
 ASSORBIMENTO_BOOST_KW = 2.0
 
-pompa = {"modalita": "normale", "accesa": True, "temp_ambiente_c": 20.5}
+pompa = {"modalita": "normale", "accesa": True, "temp_ambiente_c": 20.5, "temp_esterna_c": 9.0}
+casa = {"temp_c": 20.5, "ultimo": None}
 
 
 def solare(ora: datetime) -> dict:
@@ -24,6 +25,17 @@ def solare(ora: datetime) -> dict:
     rete = carico + batteria - pv
     return {"ts": ora.isoformat(), "pv_kw": round(pv, 2), "carico_kw": round(carico, 2),
             "rete_kw": round(rete, 2), "batteria_kw": round(batteria, 2), "soc": round(soc, 1)}
+
+
+def temperatura_casa(ora: datetime) -> float:
+    """La casa si scalda di 0,5 °C/h in boost e si raffredda di 0,2 °C/h in normale (fra 19 e 24 °C)."""
+    if casa["ultimo"] is not None:
+        ore = (ora - casa["ultimo"]).total_seconds() / 3600
+        delta = 0.5 if pompa["modalita"] == "boost" else -0.2
+        casa["temp_c"] = min(24.0, max(19.0, casa["temp_c"] + delta * ore))
+    casa["ultimo"] = ora
+    pompa["temp_ambiente_c"] = round(casa["temp_c"], 1)
+    return round(casa["temp_c"], 1)
 
 
 class Gestore(BaseHTTPRequestHandler):
@@ -38,6 +50,8 @@ class Gestore(BaseHTTPRequestHandler):
         ora = datetime.now().astimezone()
         if self.path == "/solare":
             self._json(solare(ora))
+        elif self.path == "/temperature":
+            self._json([{"ts": ora.isoformat(), "zona": "casa", "temp_c": temperatura_casa(ora)}])
         elif self.path == "/pompa":
             self._json({"ts": ora.isoformat(), **pompa})
         else:

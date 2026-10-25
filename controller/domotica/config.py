@@ -43,11 +43,13 @@ class Config:
     maxa: dict = field(default_factory=dict)
     storico: dict = field(default_factory=dict)
     avvisi: dict = field(default_factory=dict)
+    sensori: dict = field(default_factory=dict)
 
 
 def carica(percorso: Path) -> Config:
     dati = yaml.safe_load(percorso.read_text()) or {}
     b = dati.get("boost", {})
+    sensori = dati.get("sensori_temperatura", {})
     entra, esci = b.get("entra", {}), b.get("esci", {})
     fascia = entra.get("fascia", ["09:00", "17:00"])
     regole = RegoleBoost(
@@ -64,7 +66,7 @@ def carica(percorso: Path) -> Config:
         durata_min_min=b.get("durata_min_min", 30),
         cambi_max_giorno=b.get("cambi_max_giorno", 6),
         media_campioni=b.get("media_campioni", 3),
-        temp_max_c=b.get("temp_max_c"),
+        temp_max_c=sensori.get("temp_max_boost"),
     )
     solis = dati.get("solis", {})
     return Config(
@@ -78,6 +80,7 @@ def carica(percorso: Path) -> Config:
         maxa=dati.get("maxa", {}),
         storico=dati.get("storico", {}),
         avvisi=dati.get("avvisi", {}),
+        sensori=sensori,
     )
 
 

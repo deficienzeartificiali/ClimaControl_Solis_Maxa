@@ -4,7 +4,8 @@ Chromium viene avviato solo per la durata di una richiesta e poi chiuso, per sta
 nei 2 GB del PC UPS. La sessione (cookie) è salvata nel volume /app/sessione.
 
 API (solo rete interna Docker):
-  GET  /stato     -> {"modalita": "normale|boost", "accesa": bool, "temp_ambiente_c": float|null}
+  GET  /stato     -> {"modalita": "normale|boost", "accesa": bool, "temp_ambiente_c": float|null,
+                      "temp_esterna_c": float|null}
   POST /modalita  {"modalita": "normale|boost"}
 
 I selettori della web app non sono ancora noti: vanno ricavati aprendo Maxa Connect

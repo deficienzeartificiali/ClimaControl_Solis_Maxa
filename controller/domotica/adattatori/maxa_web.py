@@ -27,6 +27,7 @@ class MaxaWeb:
             accesa=bool(d.get("accesa", True)),
             temp_ambiente_c=d.get("temp_ambiente_c"),
             temp_mandata_c=d.get("temp_mandata_c"),
+            temp_esterna_c=d.get("temp_esterna_c"),
         )
 
     def imposta_modalita(self, modalita: Modalita) -> None:

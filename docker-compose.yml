@@ -26,6 +26,7 @@ services:
       - soliscloud_key_id
       - soliscloud_key_secret
       - avvisi_token
+      - own_password
     ports:
       - "8080:8080"               # pagina di stato, solo LAN
     mem_limit: 256m
@@ -82,3 +83,5 @@ secrets:
     file: ./secrets/maxa_password.txt
   avvisi_token:
     file: ./secrets/avvisi_token.txt
+  own_password:
+    file: ./secrets/own_password.txt

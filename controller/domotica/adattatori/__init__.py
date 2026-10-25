@@ -2,10 +2,11 @@
 import os
 
 from ..config import Config, segreto
-from .base import ErroreAdattatore, FonteSolare, PompaDiCalore
+from .base import ErroreAdattatore, FonteSolare, PompaDiCalore, SensoriTemperatura
 from .catena import CatenaPompa
 
-__all__ = ["ErroreAdattatore", "FonteSolare", "PompaDiCalore", "crea_fonte_solare", "crea_pompa"]
+__all__ = ["ErroreAdattatore", "FonteSolare", "PompaDiCalore", "SensoriTemperatura", "crea_fonte_solare", "crea_pompa",
+           "crea_sensori"]
 
 
 def crea_fonte_solare(cfg: Config) -> FonteSolare:
@@ -41,3 +42,23 @@ def crea_pompa(cfg: Config) -> PompaDiCalore:
         else:
             raise ValueError(f"POMPA: adattatore sconosciuto {tipo}")
     return CatenaPompa(anelli, cfg.maxa.get("errori_prima_di_sospendere", 3), cfg.maxa.get("sospensione_min", 60))
+
+
+def crea_sensori(cfg: Config) -> SensoriTemperatura:
+    tipo = os.environ.get("SENSORI_TEMP", "nessuno")
+    if tipo == "openwebnet":
+        from .openwebnet import SensoriOpenWebNet
+        zone = cfg.sensori.get("zone", "auto")
+        return SensoriOpenWebNet(
+            host=os.environ.get("OWN_HOST", ""),
+            porta=int(os.environ.get("OWN_PORT", "20000")),
+            password=segreto("own_password"),
+            nomi=zone if isinstance(zone, dict) else None,
+        )
+    if tipo == "sim":
+        from .sim import SensoriSim
+        return SensoriSim(os.environ.get("SIMULATORE_URL", "http://simulatore:8070"))
+    if tipo == "nessuno":
+        from .openwebnet import SensoriNessuno
+        return SensoriNessuno()
+    raise ValueError(f"SENSORI_TEMP sconosciuto: {tipo}")

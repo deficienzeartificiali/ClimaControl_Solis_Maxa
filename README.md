@@ -16,14 +16,15 @@ Architettura completa: [documento di architettura](https://claude.ai/artifact/Vg
 | `secrets/` | un file per segreto, fuori da git |
 
 Gli adattatori si scelgono da `.env`: `FONTE_SOLARE=soliscloud|sim`, `POMPA=maxa_web,rele|rele|sim`
-(la pompa usa una catena: se il primo adattatore fallisce si passa al successivo).
+(la pompa usa una catena: se il primo adattatore fallisce si passa al successivo),
+`SENSORI_TEMP=openwebnet|sim|nessuno` per la temperatura di casa dal termostato BTicino MyHOME.
 
 ## Avvio
 
 ```sh
 cp .env.example .env              # oppure .env.sim.example -> .env.sim
 cp config/config.example.yaml config/config.yaml
-touch secrets/{soliscloud_key_id,soliscloud_key_secret,maxa_utente,maxa_password,avvisi_token}.txt
+touch secrets/{soliscloud_key_id,soliscloud_key_secret,maxa_utente,maxa_password,avvisi_token,own_password}.txt
 chmod 600 secrets/*.txt
 
 docker compose --env-file .env.sim --profile sim up -d   # con il simulatore
@@ -47,5 +48,5 @@ pytest
 - SolisCloud: verificare nomi dei campi e segni di `psum` e `batteryPower` sulla prima risposta reale.
 - maxa-bridge: indirizzo della web app (`MAXA_URL`), login, lettura stato e comando boost.
 - Relè: scegliere l'ingresso Maxa (X-15 o X-20) dal manuale installatore, IP dello Shelly in `config.yaml`.
-- Sensori di temperatura BTicino MyHOME (OpenWebNet, interfaccia `SensoriTemperatura`): il servizio fa da regia fra termostato e Maxa, che non si parlano.
+- Sensori BTicino: verificare sul gateway reale il tipo di autenticazione OpenWebNet e gli indirizzi zona. In fase 1 si usa una sola temperatura "casa" (media delle zone trovate), in sola lettura.
 - Simulatore completo (nuvole, scenari forzati, batteria realistica).

@@ -30,7 +30,9 @@ class Logica:
 
     # --- API pubblica -------------------------------------------------------
 
-    def decidi(self, campioni: list[Campione], ora: datetime, pompa: StatoPompa | None = None) -> Decisione:
+    def decidi(self, campioni: list[Campione], ora: datetime, pompa: StatoPompa | None = None,
+               temp_casa: float | None = None) -> Decisione:
+        """temp_casa: temperatura di casa dai sensori BTicino, None se assente o vecchia."""
         s = self.stato
         if s.pausa_fino and ora < s.pausa_fino:
             return self._resta(f"pausa manuale fino alle {s.pausa_fino:%H:%M}")
@@ -46,8 +48,8 @@ class Logica:
             return self._resta("dati Solis assenti o vecchi")
 
         if s.modalita == Modalita.BOOST:
-            return self._valuta_uscita(campioni, ora, pompa)
-        return self._valuta_ingresso(campioni, ora, pompa)
+            return self._valuta_uscita(campioni, ora, pompa, temp_casa)
+        return self._valuta_ingresso(campioni, ora, pompa, temp_casa)
 
     def registra_cambio(self, modalita: Modalita, ora: datetime) -> None:
         """Da chiamare quando il comando è stato applicato (o simulato in solo_osserva)."""
@@ -62,7 +64,7 @@ class Logica:
 
     # --- regole -------------------------------------------------------------
 
-    def _valuta_ingresso(self, campioni, ora, pompa) -> Decisione:
+    def _valuta_ingresso(self, campioni, ora, pompa, temp_casa) -> Decisione:
         r, s = self.r, self.stato
         if s.cambi_per_giorno.get(ora.date(), 0) >= r.cambi_max_giorno:
             return self._resta("raggiunto il massimo di cambi giornalieri")
@@ -75,13 +77,13 @@ class Logica:
             return self._resta("campioni insufficienti per la media")
         media = sum(self.surplus_kw(c) for c in ultimi) / len(ultimi)
         soc = campioni[-1].soc
-        if self._troppo_caldo(pompa):
+        if self._troppo_caldo(pompa, temp_casa):
             return self._resta("comfort massimo già raggiunto")
         if media >= r.surplus_min_kw and soc >= r.soc_min:
             return self._vai(Modalita.BOOST, f"surplus medio {media:.2f} kW, SOC {soc:.0f}%")
         return self._resta(f"surplus medio {media:.2f} kW, SOC {soc:.0f}%")
 
-    def _valuta_uscita(self, campioni, ora, pompa) -> Decisione:
+    def _valuta_uscita(self, campioni, ora, pompa, temp_casa) -> Decisione:
         r, s = self.r, self.stato
         ultimo = campioni[-1]
         # Uscite di sicurezza: valgono anche prima della durata minima.
@@ -89,7 +91,7 @@ class Logica:
             return self._vai(Modalita.NORMALE, f"SOC sceso a {ultimo.soc:.0f}%")
         if ora.time() >= r.dopo_le or ora.time() < r.fascia_inizio:
             return self._vai(Modalita.NORMALE, "fine della fascia di boost")
-        if self._troppo_caldo(pompa):
+        if self._troppo_caldo(pompa, temp_casa):
             return self._vai(Modalita.NORMALE, "comfort massimo raggiunto")
 
         if s.ultimo_cambio and ora - s.ultimo_cambio < timedelta(minutes=r.durata_min_min):
@@ -109,10 +111,12 @@ class Logica:
     def _dati_vecchi(self, campioni, ora) -> bool:
         return not campioni or ora - campioni[-1].ts > timedelta(minutes=self.cfg.dati_vecchi_dopo_min)
 
-    def _troppo_caldo(self, pompa: StatoPompa | None) -> bool:
+    def _troppo_caldo(self, pompa: StatoPompa | None, temp_casa: float | None) -> bool:
+        # Prima i sensori BTicino, poi la temperatura ambiente letta dalla Maxa;
+        # senza nessuna delle due il criterio si ignora e restano le regole solari.
         limite = self.r.temp_max_c
-        return bool(limite is not None and pompa and pompa.temp_ambiente_c is not None
-                    and pompa.temp_ambiente_c >= limite)
+        temp = temp_casa if temp_casa is not None else (pompa.temp_ambiente_c if pompa else None)
+        return limite is not None and temp is not None and temp >= limite
 
     def _cambiata_a_mano(self, pompa: StatoPompa) -> bool:
         # Lo stato letto dopo un nostro comando può arrivare in ritardo: 10 minuti di tolleranza.

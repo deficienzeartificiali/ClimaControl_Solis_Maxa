@@ -29,11 +29,16 @@ boost:
     soc_sotto: 70
     dopo_le: "18:00"
   durata_min_min: 30
-  temp_max_c: null            # es. 23: niente boost sopra questa temperatura ambiente
   cambi_max_giorno: 6
   media_campioni: 3
 
 pausa_manuale_ore: 4
+
+sensori_temperatura:          # termostato BTicino MyHOME via OpenWebNet (SENSORI_TEMP in .env)
+  zone: auto                  # scoperta automatica; oppure nomi: {1: casa} o {1: soggiorno, 2: camere}
+  temp_max_boost: 22.5        # niente boost, o uscita dal boost, se casa è a questa temperatura o oltre
+  dati_vecchi_dopo_min: 15    # oltre questo tempo la temperatura si ignora e restano le regole solari
+  # la temperatura esterna arriva dalla Maxa (nessuna sonda esterna sul BUS BTicino)
 
 maxa:
   lettura_stato_min: 15

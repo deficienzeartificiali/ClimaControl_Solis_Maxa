@@ -8,6 +8,7 @@ Un file per segreto, permessi 600, mai nel repository (la cartella è in `.gitig
 | `soliscloud_key_secret.txt` | KeySecret API SolisCloud | controller |
 | `maxa_utente.txt` | utente Maxa Connect | maxa-bridge |
 | `maxa_password.txt` | password Maxa Connect | maxa-bridge |
+| `own_password.txt` | password OPEN del gateway BTicino MyHOME (vuota se non richiesta) | controller |
 | `avvisi_token.txt` | token ntfy o bot Telegram (può essere vuoto) | controller |
 
-In modalità simulata bastano file vuoti: `touch secrets/{soliscloud_key_id,soliscloud_key_secret,maxa_utente,maxa_password,avvisi_token}.txt`
+In modalità simulata bastano file vuoti: `touch secrets/{soliscloud_key_id,soliscloud_key_secret,maxa_utente,maxa_password,avvisi_token,own_password}.txt`

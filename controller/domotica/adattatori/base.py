@@ -23,7 +23,7 @@ class PompaDiCalore(Protocol):
 
 
 class SensoriTemperatura(Protocol):
-    """Zone del termostato BTicino via OpenWebNet sul MyHOMEServer1 (adattatore in progettazione).
+    """Zone del termostato BTicino via OpenWebNet sul MyHOMEServer1 (fase 1: sola lettura).
 
     Serve alla regia fra termostato e Maxa, che oggi non si parlano.
     """

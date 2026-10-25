@@ -11,7 +11,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from . import config as configurazione
 from . import web
-from .adattatori import ErroreAdattatore, crea_fonte_solare, crea_pompa
+from .adattatori import ErroreAdattatore, crea_fonte_solare, crea_pompa, crea_sensori
 from .avvisi import Avvisi
 from .logica import Logica
 from .modelli import Modalita
@@ -40,10 +40,13 @@ class Controller:
         self.storico = Storico(DATI / "storico.db")
         self.solare = crea_fonte_solare(cfg)
         self.pompa = crea_pompa(cfg)
+        self.sensori = crea_sensori(cfg)
+        self.ultime_temperature = []
         self.logica = Logica(cfg)
         self.avvisi = Avvisi(cfg.avvisi.get("tipo", "nessuno"), cfg.avvisi.get("canale", ""),
                              configurazione.segreto("avvisi_token"))
         self.ultimo_stato_pompa = None
+        self.temp_casa = None
         self.config_mtime = CONFIG.stat().st_mtime if CONFIG.exists() else 0
 
     def ricarica_config_se_cambiata(self) -> None:
@@ -52,6 +55,20 @@ class Controller:
             self.cfg = configurazione.carica(CONFIG)
             self.logica = Logica(self.cfg, self.logica.stato)
             log.info("config.yaml ricaricato")
+
+    def leggi_temperature(self, adesso: datetime) -> float | None:
+        """Temperatura di casa: media delle zone lette di recente, None se vecchia o assente."""
+        try:
+            letture = self.sensori.leggi()
+            if letture:
+                self.ultime_temperature = letture
+                self.storico.salva_temperature(letture)
+        except ErroreAdattatore as e:
+            log.warning("lettura temperature fallita: %s", e)
+            self.storico.evento(adesso, "warning", str(e))
+        limite = timedelta(minutes=self.cfg.sensori.get("dati_vecchi_dopo_min", 15))
+        recenti = [z.temp_c for z in self.ultime_temperature if adesso - z.ts <= limite]
+        return round(sum(recenti) / len(recenti), 2) if recenti else None
 
     def ciclo(self) -> None:
         adesso = ora()
@@ -64,7 +81,8 @@ class Controller:
 
         campioni = self.storico.ultimi_campioni(12)
         pompa = None if self.cfg.solo_osserva else self.ultimo_stato_pompa
-        decisione = self.logica.decidi(campioni, adesso, pompa)
+        self.temp_casa = self.leggi_temperature(adesso)
+        decisione = self.logica.decidi(campioni, adesso, pompa, self.temp_casa)
         inviato = False
         if decisione.cambia:
             if self.cfg.solo_osserva:
@@ -100,7 +118,8 @@ class Controller:
     def stato_corrente(self) -> dict:
         s = self.logica.stato
         return {"modalita": s.modalita.value, "pausa_fino": s.pausa_fino, "ultimo_cambio": s.ultimo_cambio,
-                "solo_osserva": self.cfg.solo_osserva, "pompa": asdict(self.ultimo_stato_pompa) if self.ultimo_stato_pompa else None}
+                "solo_osserva": self.cfg.solo_osserva, "temp_casa_c": self.temp_casa,
+                "zone": [asdict(z) for z in self.ultime_temperature], "pompa": asdict(self.ultimo_stato_pompa) if self.ultimo_stato_pompa else None}
 
     def avvio_sicuro(self) -> None:
         """Allo start legge lo stato reale prima di decidere: non presume nulla."""

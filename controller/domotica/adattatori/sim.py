@@ -3,7 +3,7 @@ from datetime import datetime
 
 import requests
 
-from ..modelli import Campione, Modalita, StatoPompa
+from ..modelli import Campione, LetturaZona, Modalita, StatoPompa
 from .base import ErroreAdattatore
 
 
@@ -36,7 +36,19 @@ class PompaSim(_ClientSim):
     def stato(self) -> StatoPompa:
         d = self._chiama("GET", "/pompa")
         return StatoPompa(ts=datetime.fromisoformat(d["ts"]), modalita=Modalita(d["modalita"]),
-                          accesa=d["accesa"], temp_ambiente_c=d.get("temp_ambiente_c"))
+                          accesa=d["accesa"], temp_ambiente_c=d.get("temp_ambiente_c"),
+                          temp_esterna_c=d.get("temp_esterna_c"))
 
     def imposta_modalita(self, modalita: Modalita) -> None:
         self._chiama("POST", "/pompa", json={"modalita": modalita.value})
+
+
+class SensoriSim(_ClientSim):
+    nome = "sim"
+
+    def zone(self) -> list[str]:
+        return [z["zona"] for z in self._chiama("GET", "/temperature")]
+
+    def leggi(self) -> list[LetturaZona]:
+        return [LetturaZona(ts=datetime.fromisoformat(z["ts"]), zona=z["zona"], temp_c=z["temp_c"])
+                for z in self._chiama("GET", "/temperature")]
