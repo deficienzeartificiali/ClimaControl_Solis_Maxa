@@ -1,0 +1,87 @@
+# Bozza - servizio h24 riscaldamento Maxa + fotovoltaico Solis
+# Avvio reale:      docker compose up -d
+# Avvio simulato:   docker compose --env-file .env.sim --profile sim up -d
+# Il simulatore completo arriva nel thread dedicato; qui c'è uno stub minimo.
+
+x-log: &log
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  controller:
+    build: ./controller
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    environment:
+      TZ: ${TZ:-Europe/Rome}
+      MAXA_BRIDGE_URL: http://maxa-bridge:8090
+      SIMULATORE_URL: http://simulatore:8070
+    volumes:
+      - ./config:/app/config:ro
+      - dati:/app/dati            # SQLite storico + heartbeat
+    secrets:
+      - soliscloud_key_id
+      - soliscloud_key_secret
+      - avvisi_token
+      - own_password
+    ports:
+      - "8080:8080"               # pagina di stato, solo LAN
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os,time,sys; sys.exit(time.time()-os.path.getmtime('/app/dati/heartbeat')>180)"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    logging: *log
+
+  maxa-bridge:
+    build: ./maxa-bridge          # base: immagine ufficiale Playwright Python, versione fissata nel Dockerfile
+    restart: unless-stopped
+    init: true                    # raccoglie i processi Chromium figli
+    environment:
+      TZ: ${TZ:-Europe/Rome}
+      CHROMIUM_TIMEOUT_S: "60"
+    volumes:
+      - sessione_maxa:/app/sessione   # cookie della web app, evita login a ogni comando
+    secrets:
+      - maxa_utente
+      - maxa_password
+    expose:
+      - "8090"                    # raggiungibile solo dal controller, nessuna porta sull'host
+    mem_limit: 700m
+    shm_size: "128m"
+    logging: *log
+
+  simulatore:
+    build: ./simulatore
+    profiles: ["sim"]
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/Rome}
+    expose:
+      - "8070"
+    ports:
+      - "8070:8070"               # API per forzare scenari durante i test
+    mem_limit: 128m
+    logging: *log
+
+volumes:
+  dati:
+  sessione_maxa:
+
+secrets:
+  soliscloud_key_id:
+    file: ./secrets/soliscloud_key_id.txt
+  soliscloud_key_secret:
+    file: ./secrets/soliscloud_key_secret.txt
+  maxa_utente:
+    file: ./secrets/maxa_utente.txt
+  maxa_password:
+    file: ./secrets/maxa_password.txt
+  avvisi_token:
+    file: ./secrets/avvisi_token.txt
+  own_password:
+    file: ./secrets/own_password.txt
