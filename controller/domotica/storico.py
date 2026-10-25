@@ -1,7 +1,7 @@
 """Storico su SQLite: campioni, decisioni ed eventi."""
 import sqlite3
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .modelli import Campione, Decisione, LetturaZona
@@ -25,6 +25,11 @@ CREATE INDEX IF NOT EXISTS temperature_ts ON temperature(ts);
 """
 
 
+def _utc(ts: datetime) -> str:
+    """Tutto in UTC: con offset misti (Solis in UTC, il resto in ora locale) l'ordine dei testi è sbagliato."""
+    return ts.astimezone(timezone.utc).isoformat()
+
+
 class Storico:
     def __init__(self, percorso: Path | str):
         self.db = sqlite3.connect(str(percorso), check_same_thread=False)
@@ -36,21 +41,21 @@ class Storico:
     def salva_campione(self, c: Campione) -> None:
         with self.lock, self.db:
             self.db.execute("INSERT OR IGNORE INTO campioni VALUES (?,?,?,?,?,?)",
-                            (c.ts.isoformat(), c.pv_kw, c.carico_kw, c.rete_kw, c.batteria_kw, c.soc))
+                            (_utc(c.ts), c.pv_kw, c.carico_kw, c.rete_kw, c.batteria_kw, c.soc))
 
     def salva_temperature(self, letture: list[LetturaZona]) -> None:
         with self.lock, self.db:
             self.db.executemany("INSERT INTO temperature VALUES (?,?,?)",
-                                [(z.ts.isoformat(), z.zona, z.temp_c) for z in letture])
+                                [(_utc(z.ts), z.zona, z.temp_c) for z in letture])
 
     def salva_decisione(self, ts: datetime, d: Decisione, inviato: bool) -> None:
         with self.lock, self.db:
             self.db.execute("INSERT INTO decisioni VALUES (?,?,?,?,?)",
-                            (ts.isoformat(), d.modalita.value, d.motivo, int(d.cambia), int(inviato)))
+                            (_utc(ts), d.modalita.value, d.motivo, int(d.cambia), int(inviato)))
 
     def evento(self, ts: datetime, livello: str, messaggio: str) -> None:
         with self.lock, self.db:
-            self.db.execute("INSERT INTO eventi VALUES (?,?,?)", (ts.isoformat(), livello, messaggio))
+            self.db.execute("INSERT INTO eventi VALUES (?,?,?)", (_utc(ts), livello, messaggio))
 
     def ultimi_campioni(self, n: int) -> list[Campione]:
         with self.lock:
@@ -66,7 +71,7 @@ class Storico:
         return {"decisioni": [dict(r) for r in dec], "eventi": [dict(r) for r in ev]}
 
     def pulisci(self, ora: datetime, giorni: int) -> None:
-        limite = (ora - timedelta(days=giorni)).isoformat()
+        limite = _utc(ora - timedelta(days=giorni))
         with self.lock:
             with self.db:
                 for tabella in ("campioni", "decisioni", "temperature", "eventi"):

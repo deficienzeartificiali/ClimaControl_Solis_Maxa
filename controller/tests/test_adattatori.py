@@ -103,8 +103,21 @@ def test_catena_tutti_guasti_solleva_errore():
         CatenaPompa([PompaFinta("a", True), PompaFinta("b", True)]).imposta_modalita(Modalita.BOOST)
 
 
+def test_catena_legge_lo_stato_da_chi_ha_ricevuto_il_comando():
+    web, rele = PompaFinta("maxa_web", guasta=True), PompaFinta("rele")
+    catena = CatenaPompa([web, rele])
+    catena.imposta_modalita(Modalita.BOOST)
+    web.guasta = False
+    catena.stato()
+    rele.guasta = True
+    # Il relè non risponde: leggere dall'app (che non vede il relè) farebbe sembrare un cambio manuale.
+    with pytest.raises(ErroreAdattatore):
+        catena.stato()
+
+
 def test_config_esempio_si_carica():
     cfg = carica(Path(__file__).resolve().parents[2] / "config" / "config.example.yaml")
     assert cfg.solo_osserva is True
     assert cfg.boost.surplus_min_kw == 1.5
     assert cfg.boost.fascia_inizio.hour == 9
+    assert cfg.boost.deficit_kw == 0.5

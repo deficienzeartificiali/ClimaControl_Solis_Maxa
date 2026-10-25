@@ -14,9 +14,15 @@ services:
     build: ./controller
     restart: unless-stopped
     init: true
-    env_file: .env
     environment:
+      # Valori presi da .env (o dal file passato con --env-file): così .env.sim cambia davvero gli adattatori.
       TZ: ${TZ:-Europe/Rome}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      FONTE_SOLARE: ${FONTE_SOLARE:-sim}
+      POMPA: ${POMPA:-sim}
+      SENSORI_TEMP: ${SENSORI_TEMP:-nessuno}
+      OWN_HOST: ${OWN_HOST:-}
+      OWN_PORT: ${OWN_PORT:-20000}
       MAXA_BRIDGE_URL: http://maxa-bridge:8090
       SIMULATORE_URL: http://simulatore:8070
     volumes:
@@ -31,7 +37,9 @@ services:
       - "8080:8080"               # pagina di stato, solo LAN
     mem_limit: 256m
     healthcheck:
-      test: ["CMD", "python", "-c", "import os,time,sys; sys.exit(time.time()-os.path.getmtime('/app/dati/heartbeat')>180)"]
+      # Il heartbeat si tocca a fine ciclo (ogni 300 s): oltre 700 s il ciclo non gira da due turni.
+      # Docker segna "unhealthy" ma non riavvia: lo stato si vede con docker ps e nella pagina :8080.
+      test: ["CMD", "python", "-c", "import os,time,sys; sys.exit(time.time()-os.path.getmtime('/app/dati/heartbeat')>700)"]
       interval: 60s
       timeout: 10s
       retries: 3

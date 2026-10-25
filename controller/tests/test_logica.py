@@ -145,3 +145,16 @@ def test_senza_temperatura_restano_le_regole_solari():
     from domotica.config import RegoleBoost
     logica = Logica(Config(boost=RegoleBoost(temp_max_c=22.5)))
     assert logica.decidi(serie(GIORNO, 3), GIORNO, temp_casa=None).cambia
+
+
+def test_rete_e_batteria_insieme_fanno_deficit(logica):
+    # 0,3 kW dalla rete e 0,3 kW dalla batteria: nessuno dei due da solo supera 0,5, insieme sì.
+    in_boost(logica, GIORNO - timedelta(minutes=45))
+    d = logica.decidi(serie(GIORNO, 3, rete_kw=0.3, batteria_kw=-0.3, soc=92), GIORNO)
+    assert d.cambia and d.modalita == Modalita.NORMALE
+
+
+def test_niente_boost_con_pompa_spenta(logica):
+    pompa = StatoPompa(ts=GIORNO - timedelta(hours=1), modalita=Modalita.NORMALE, accesa=False)
+    d = logica.decidi(serie(GIORNO, 3), GIORNO, pompa)
+    assert not d.cambia and "spenta" in d.motivo

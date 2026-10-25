@@ -21,14 +21,15 @@ class CatenaPompa:
         self.orologio = orologio
         self.errori = {a.nome: 0 for a in anelli}
         self.sospeso_fino: dict[str, datetime] = {}
+        self.ultimo_comando: str | None = None
 
     def _attivi(self):
         ora = self.orologio()
         return [a for a in self.anelli if self.sospeso_fino.get(a.nome, ora) <= ora]
 
-    def _esegui(self, operazione: str, chiamata):
+    def _esegui(self, operazione: str, chiamata, anelli=None):
         motivi = []
-        for anello in self._attivi():
+        for anello in self._attivi() if anelli is None else anelli:
             try:
                 risultato = chiamata(anello)
                 self.errori[anello.nome] = 0
@@ -44,7 +45,13 @@ class CatenaPompa:
         raise ErroreAdattatore(f"{operazione}: nessun adattatore disponibile ({'; '.join(motivi) or 'tutti sospesi'})")
 
     def stato(self) -> StatoPompa:
-        return self._esegui("stato", lambda a: a.stato())
+        # Lo stato si legge solo da chi ha ricevuto l'ultimo comando: relè e app non si vedono a vicenda,
+        # e leggere dall'altro farebbe sembrare un cambio manuale. Prima del primo comando va bene chiunque.
+        anelli = [a for a in self._attivi() if self.ultimo_comando in (None, a.nome)]
+        return self._esegui("stato", lambda a: a.stato(), anelli)
 
     def imposta_modalita(self, modalita: Modalita) -> None:
-        self._esegui("imposta_modalita", lambda a: a.imposta_modalita(modalita))
+        def comanda(anello):
+            anello.imposta_modalita(modalita)
+            self.ultimo_comando = anello.nome
+        self._esegui("imposta_modalita", comanda)

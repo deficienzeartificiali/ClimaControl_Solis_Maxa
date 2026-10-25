@@ -13,8 +13,7 @@ rele:
   tipo: shelly_gen2
   ip: "192.168.5.DA_COMPILARE"
   canale: 0
-  ingresso_maxa: X-20         # X-15 on/off remoto oppure X-20 doppio setpoint, da confermare col manuale
-  eccitato_significa: boost   # a riposo la Maxa resta in Normale
+  # Cablaggio: ingresso X-20 (doppio setpoint) della Maxa; relè eccitato = Boost, a riposo = Normale.
 
 boost:
   entra:
@@ -23,8 +22,7 @@ boost:
     fascia: ["09:00", "17:00"]
     pausa_dall_ultimo_cambio_min: 20
   esci:
-    prelievo_kw: 0.5
-    scarica_kw: 1.0
+    deficit_kw: 0.5           # prelievo da rete + scarica batteria, sommati
     per_min: 10
     soc_sotto: 70
     dopo_le: "18:00"

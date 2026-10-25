@@ -34,6 +34,15 @@ docker compose logs -f controller
 
 Il controller parte con `solo_osserva: true`: calcola e registra le decisioni senza comandare la Maxa.
 
+`.env` (o il file passato con `--env-file`) sceglie gli adattatori; `config/config.yaml` le soglie,
+e viene riletto da solo quando cambia (se non è valido resta in uso quello precedente).
+Stato, problemi aperti e ultime decisioni: `http://<pc>:8080/stato` (JSON). Pausa manuale:
+`curl -X POST 'http://<pc>:8080/pausa?ore=4'`.
+
+Docker segna il controller `unhealthy` se il ciclo non gira da oltre 700 s, ma non lo riavvia da solo:
+si vede con `docker ps`. Un avviso parte quando un problema inizia (dati Solis assenti, comando Maxa
+fallito) e uno quando si risolve.
+
 ## Test
 
 ```sh
@@ -47,6 +56,9 @@ pytest
 
 - SolisCloud: verificare nomi dei campi e segni di `psum` e `batteryPower` sulla prima risposta reale.
 - maxa-bridge: indirizzo della web app (`MAXA_URL`), login, lettura stato e comando boost.
-- Relè: scegliere l'ingresso Maxa (X-15 o X-20) dal manuale installatore, IP dello Shelly in `config.yaml`.
+- Relè: scegliere l'ingresso Maxa (X-15 o X-20) dal manuale installatore, IP dello Shelly in `config.yaml`,
+  stato all'accensione dello Shelly su "spento" (dopo un blackout la Maxa torna in Normale).
+- Limite di immissione: se l'inverter taglia la cessione, il surplus non si vede da `psum` e il boost non parte.
+- Estate: la regola `temp_max_boost` vale solo per il riscaldamento.
 - Sensori BTicino: verificare sul gateway reale il tipo di autenticazione OpenWebNet e gli indirizzi zona. In fase 1 si usa una sola temperatura "casa" (media delle zone trovate), in sola lettura.
 - Simulatore completo (nuvole, scenari forzati, batteria realistica).

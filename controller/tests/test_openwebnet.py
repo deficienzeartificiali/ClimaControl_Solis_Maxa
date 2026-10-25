@@ -115,3 +115,31 @@ def test_gateway_irraggiungibile():
     sensori = SensoriOpenWebNet("192.168.5.10", connetti=lambda h, p, pw: Connessione(h, p, pw, apri=rifiuta))
     with pytest.raises(ErroreAdattatore):
         sensori.leggi()
+
+
+class GatewayChesiBlocca(GatewayFinto):
+    """Risponde alla zona 1 e poi smette di rispondere."""
+
+    def sendall(self, dati: bytes):
+        if dati.decode() == "*#4*2*0##":
+            self.bloccato = True
+        super().sendall(dati)
+
+    def recv(self, n):
+        if getattr(self, "bloccato", False):
+            raise TimeoutError("timed out")
+        return super().recv(n)
+
+
+def test_scansione_zone_si_ferma_al_primo_timeout():
+    gw = GatewayChesiBlocca({"1": "0205", "3": "0218"})
+    sensori = SensoriOpenWebNet("192.168.5.10", connetti=connessione(gw))
+    assert sensori.zone() == ["1"]
+
+
+def test_errore_di_rete_in_invio_diventa_errore_adattatore():
+    gw = GatewayFinto({"1": "0205"})
+    conn = Connessione("h", 20000, "", apri=gw)
+    gw.sendall = lambda _: (_ for _ in ()).throw(BrokenPipeError("pipe"))
+    with pytest.raises(ErroreAdattatore):
+        conn.invia("*#4*1*0##")

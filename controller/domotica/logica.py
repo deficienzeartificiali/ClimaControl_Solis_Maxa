@@ -72,6 +72,8 @@ class Logica:
             return self._resta("fuori dalla fascia di boost")
         if s.ultimo_cambio and ora - s.ultimo_cambio < timedelta(minutes=r.pausa_dall_ultimo_cambio_min):
             return self._resta("troppo presto dall'ultimo cambio")
+        if pompa and not pompa.accesa:
+            return self._resta("pompa di calore spenta")
         ultimi = campioni[-r.media_campioni:]
         if len(ultimi) < r.media_campioni:
             return self._resta("campioni insufficienti per la media")
@@ -96,11 +98,10 @@ class Logica:
 
         if s.ultimo_cambio and ora - s.ultimo_cambio < timedelta(minutes=r.durata_min_min):
             return self._resta("boost in corso, durata minima non raggiunta")
+        # Rete e batteria contano insieme: 0,3 kW dalla rete più 0,3 kW dalla batteria sono già un deficit.
         finestra = campioni[-self._campioni_per(r.per_min):]
-        if all(c.prelievo_kw >= r.prelievo_kw for c in finestra):
-            return self._vai(Modalita.NORMALE, f"prelievo dalla rete per {r.per_min} min")
-        if all(c.scarica_kw >= r.scarica_kw for c in finestra):
-            return self._vai(Modalita.NORMALE, f"batteria in scarica per {r.per_min} min")
+        if all(c.deficit_kw >= r.deficit_kw for c in finestra):
+            return self._vai(Modalita.NORMALE, f"prelievo da rete e batteria per {r.per_min} min")
         return self._resta("boost in corso")
 
     # --- supporto -----------------------------------------------------------
@@ -114,6 +115,7 @@ class Logica:
     def _troppo_caldo(self, pompa: StatoPompa | None, temp_casa: float | None) -> bool:
         # Prima i sensori BTicino, poi la temperatura ambiente letta dalla Maxa;
         # senza nessuna delle due il criterio si ignora e restano le regole solari.
+        # shortcut: vale solo per il riscaldamento; prima dell'estate serve la regola inversa (casa troppo fresca).
         limite = self.r.temp_max_c
         temp = temp_casa if temp_casa is not None else (pompa.temp_ambiente_c if pompa else None)
         return limite is not None and temp is not None and temp >= limite
