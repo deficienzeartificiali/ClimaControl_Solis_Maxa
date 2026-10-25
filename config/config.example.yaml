@@ -1,0 +1,48 @@
+# Valori iniziali da tarare sui dati reali. Il controller rilegge il file quando cambia.
+solo_osserva: true            # prime settimane: decide e registra, non comanda
+
+solis:
+  inverter_sn: "DA_COMPILARE" # numero di serie inverter come appare in SolisCloud
+  # Segni da verificare sulla prima risposta reale di inverterDetail:
+  rete_cessione_positiva: true    # psum > 0 significa cessione alla rete
+  batteria_carica_positiva: true  # batteryPower > 0 significa batteria in carica
+  intervallo_s: 300
+  dati_vecchi_dopo_min: 20
+
+rele:
+  tipo: shelly_gen2
+  ip: "192.168.5.DA_COMPILARE"
+  canale: 0
+  ingresso_maxa: X-20         # X-15 on/off remoto oppure X-20 doppio setpoint, da confermare col manuale
+  eccitato_significa: boost   # a riposo la Maxa resta in Normale
+
+boost:
+  entra:
+    surplus_min_kw: 1.5
+    soc_min: 90
+    fascia: ["09:00", "17:00"]
+    pausa_dall_ultimo_cambio_min: 20
+  esci:
+    prelievo_kw: 0.5
+    scarica_kw: 1.0
+    per_min: 10
+    soc_sotto: 70
+    dopo_le: "18:00"
+  durata_min_min: 30
+  temp_max_c: null            # es. 23: niente boost sopra questa temperatura ambiente
+  cambi_max_giorno: 6
+  media_campioni: 3
+
+pausa_manuale_ore: 4
+
+maxa:
+  lettura_stato_min: 15
+  errori_prima_di_sospendere: 3
+  sospensione_min: 60
+
+storico:
+  conserva_giorni: 400
+
+avvisi:
+  tipo: ntfy                  # ntfy | telegram | nessuno
+  canale: "DA_COMPILARE"
