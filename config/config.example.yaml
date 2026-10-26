@@ -38,7 +38,11 @@ sensori_temperatura:          # termostato BTicino MyHOME via OpenWebNet (SENSOR
   dati_vecchi_dopo_min: 15    # oltre questo tempo la temperatura si ignora e restano le regole solari
   # la temperatura esterna arriva dalla Maxa (nessuna sonda esterna sul BUS BTicino)
 
-maxa:
+maxa:                         # cloud Maxa Connect (POMPA=maxa_cloud), credenziali in secrets/
+  installazione: ""           # vuoto = primo impianto dell'account
+  componente: ""              # vuoto = prima pompa di calore trovata sull'impianto
+  boost: comfort              # Boost = Comfort, Normale = Economy (preset h7204/h7207 nella app)
+  mqtt_v311: false            # true solo se AWS IoT rifiuta la connessione MQTT 3.1
   lettura_stato_min: 15
   errori_prima_di_sospendere: 3
   sospensione_min: 60

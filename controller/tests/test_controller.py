@@ -114,3 +114,11 @@ def test_pausa_dalla_pagina(pagina, query, codice):
         stato = e.code
     assert stato == codice
     assert len(pause) == (1 if codice == 200 else 0)
+
+
+def test_letture_della_pompa_finiscono_nello_storico(controller):
+    from domotica.modelli import StatoPompa
+    controller.pompa.stato = lambda: StatoPompa(main.ora(), Modalita.NORMALE, True, potenza_kw=1.4)
+    controller.leggi_stato_pompa()
+    riga = controller.storico.db.execute("SELECT modalita, potenza_kw FROM pompa").fetchone()
+    assert tuple(riga) == ("normale", 1.4)

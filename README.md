@@ -10,12 +10,11 @@ Architettura completa: [documento di architettura](https://claude.ai/artifact/Vg
 | Cartella | Contenuto |
 | --- | --- |
 | `controller/` | logica a stati, scheduler, adattatori, storico SQLite, pagina di stato `:8080` |
-| `maxa-bridge/` | ponte HTTP interno verso la web app Maxa Connect con Playwright (selettori ancora da scrivere) |
 | `simulatore/` | stub minimo per avviare lo stack con dati finti (profilo `sim`) |
 | `config/` | `config.example.yaml` con soglie e fasce orarie |
 | `secrets/` | un file per segreto, fuori da git |
 
-Gli adattatori si scelgono da `.env`: `FONTE_SOLARE=soliscloud|sim`, `POMPA=maxa_web,rele|rele|sim`
+Gli adattatori si scelgono da `.env`: `FONTE_SOLARE=soliscloud|sim`, `POMPA=maxa_cloud|maxa_cloud,rele|rele|sim`
 (la pompa usa una catena: se il primo adattatore fallisce si passa al successivo),
 `SENSORI_TEMP=openwebnet|sim|nessuno` per la temperatura di casa dal termostato BTicino MyHOME.
 
@@ -55,7 +54,10 @@ pytest
 ## Da completare
 
 - SolisCloud: verificare nomi dei campi e segni di `psum` e `batteryPower` sulla prima risposta reale.
-- maxa-bridge: indirizzo della web app (`MAXA_URL`), login, lettura stato e comando boost.
+- Maxa Connect (`maxa_cloud`): login e lettura dal cloud come la web app (Cognito, AWS IoT MQTT).
+  Manca il comando Comfort/Economy: serve una registrazione della web app mentre lo si cambia.
+  Le letture della pompa (modalità, mandata, esterna, potenza assorbita) finiscono nella tabella `pompa`
+  dello storico, utile per tarare `surplus_min_kw`.
 - Relè: scegliere l'ingresso Maxa (X-15 o X-20) dal manuale installatore, IP dello Shelly in `config.yaml`,
   stato all'accensione dello Shelly su "spento" (dopo un blackout la Maxa torna in Normale).
 - Limite di immissione: se l'inverter taglia la cessione, il surplus non si vede da `psum` e il boost non parte.

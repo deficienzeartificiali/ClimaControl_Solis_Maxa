@@ -23,7 +23,6 @@ services:
       SENSORI_TEMP: ${SENSORI_TEMP:-nessuno}
       OWN_HOST: ${OWN_HOST:-}
       OWN_PORT: ${OWN_PORT:-20000}
-      MAXA_BRIDGE_URL: http://maxa-bridge:8090
       SIMULATORE_URL: http://simulatore:8070
     volumes:
       - ./config:/app/config:ro
@@ -31,6 +30,8 @@ services:
     secrets:
       - soliscloud_key_id
       - soliscloud_key_secret
+      - maxa_utente
+      - maxa_password
       - avvisi_token
       - own_password
     ports:
@@ -43,24 +44,6 @@ services:
       interval: 60s
       timeout: 10s
       retries: 3
-    logging: *log
-
-  maxa-bridge:
-    build: ./maxa-bridge          # base: immagine ufficiale Playwright Python, versione fissata nel Dockerfile
-    restart: unless-stopped
-    init: true                    # raccoglie i processi Chromium figli
-    environment:
-      TZ: ${TZ:-Europe/Rome}
-      CHROMIUM_TIMEOUT_S: "60"
-    volumes:
-      - sessione_maxa:/app/sessione   # cookie della web app, evita login a ogni comando
-    secrets:
-      - maxa_utente
-      - maxa_password
-    expose:
-      - "8090"                    # raggiungibile solo dal controller, nessuna porta sull'host
-    mem_limit: 700m
-    shm_size: "128m"
     logging: *log
 
   simulatore:
@@ -78,7 +61,6 @@ services:
 
 volumes:
   dati:
-  sessione_maxa:
 
 secrets:
   soliscloud_key_id:

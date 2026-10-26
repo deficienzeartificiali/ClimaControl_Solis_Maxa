@@ -125,6 +125,7 @@ class Controller:
         stato = self._prova("lettura stato pompa", self.pompa.stato, ora())
         if stato:
             self.ultimo_stato_pompa = stato
+            self.storico.salva_pompa(stato)
 
     def pausa(self, ore: float) -> None:
         self.logica.stato.pausa_fino = ora() + timedelta(hours=ore)

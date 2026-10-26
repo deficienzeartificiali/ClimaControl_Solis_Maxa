@@ -30,9 +30,15 @@ def crea_pompa(cfg: Config) -> PompaDiCalore:
     anelli = []
     for tipo in os.environ.get("POMPA", "sim").split(","):
         tipo = tipo.strip()
-        if tipo == "maxa_web":
-            from .maxa_web import MaxaWeb
-            anelli.append(MaxaWeb(os.environ.get("MAXA_BRIDGE_URL", "http://maxa-bridge:8090")))
+        if tipo == "maxa_cloud":
+            from .maxa_cloud import MaxaCloud, SessioneAws
+            anelli.append(MaxaCloud(
+                SessioneAws(segreto("maxa_utente"), segreto("maxa_password")),
+                installazione=str(cfg.maxa.get("installazione", "") or ""),
+                componente=str(cfg.maxa.get("componente", "") or ""),
+                comfort_e_boost=cfg.maxa.get("boost", "comfort") == "comfort",
+                mqtt_v311=bool(cfg.maxa.get("mqtt_v311", False)),
+            ))
         elif tipo == "rele":
             from .rele_shelly import ReleShelly
             anelli.append(ReleShelly(str(cfg.rele.get("ip", "")), int(cfg.rele.get("canale", 0))))
