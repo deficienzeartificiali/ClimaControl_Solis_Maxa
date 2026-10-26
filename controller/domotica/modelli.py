@@ -53,6 +53,7 @@ class StatoPompa:
     temp_ambiente_c: float | None = None
     temp_mandata_c: float | None = None
     temp_esterna_c: float | None = None
+    potenza_kw: float | None = None
 
 
 @dataclass(frozen=True)

@@ -82,17 +82,17 @@ class PompaFinta:
 
 
 def test_catena_ripiega_sul_secondo_adattatore():
-    web, rele = PompaFinta("maxa_web", guasta=True), PompaFinta("rele")
+    web, rele = PompaFinta("maxa_cloud", guasta=True), PompaFinta("rele")
     CatenaPompa([web, rele]).imposta_modalita(Modalita.BOOST)
     assert rele.comandi == [Modalita.BOOST]
 
 
 def test_catena_sospende_dopo_errori_ripetuti():
-    web, rele = PompaFinta("maxa_web", guasta=True), PompaFinta("rele")
+    web, rele = PompaFinta("maxa_cloud", guasta=True), PompaFinta("rele")
     catena = CatenaPompa([web, rele], errori_prima_di_sospendere=3)
     for _ in range(3):
         catena.imposta_modalita(Modalita.BOOST)
-    assert "maxa_web" in catena.sospeso_fino
+    assert "maxa_cloud" in catena.sospeso_fino
     web.guasta = False
     catena.imposta_modalita(Modalita.NORMALE)
     assert web.comandi == [] and rele.comandi[-1] == Modalita.NORMALE
@@ -104,7 +104,7 @@ def test_catena_tutti_guasti_solleva_errore():
 
 
 def test_catena_legge_lo_stato_da_chi_ha_ricevuto_il_comando():
-    web, rele = PompaFinta("maxa_web", guasta=True), PompaFinta("rele")
+    web, rele = PompaFinta("maxa_cloud", guasta=True), PompaFinta("rele")
     catena = CatenaPompa([web, rele])
     catena.imposta_modalita(Modalita.BOOST)
     web.guasta = False

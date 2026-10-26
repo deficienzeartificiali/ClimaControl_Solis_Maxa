@@ -4,7 +4,7 @@ import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from .modelli import Campione, Decisione, LetturaZona
+from .modelli import Campione, Decisione, LetturaZona, StatoPompa
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS campioni (
@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS decisioni (
 );
 CREATE TABLE IF NOT EXISTS temperature (
     ts TEXT, zona TEXT, temp_c REAL
+);
+CREATE TABLE IF NOT EXISTS pompa (
+    ts TEXT, modalita TEXT, accesa INTEGER, mandata_c REAL, esterna_c REAL, potenza_kw REAL
 );
 CREATE TABLE IF NOT EXISTS eventi (
     ts TEXT, livello TEXT, messaggio TEXT
@@ -48,6 +51,12 @@ class Storico:
             self.db.executemany("INSERT INTO temperature VALUES (?,?,?)",
                                 [(_utc(z.ts), z.zona, z.temp_c) for z in letture])
 
+    def salva_pompa(self, p: StatoPompa) -> None:
+        """Serve a tarare la soglia del boost sull'assorbimento reale della Maxa."""
+        with self.lock, self.db:
+            self.db.execute("INSERT INTO pompa VALUES (?,?,?,?,?,?)", (_utc(p.ts), p.modalita.value, int(p.accesa),
+                            p.temp_mandata_c, p.temp_esterna_c, p.potenza_kw))
+
     def salva_decisione(self, ts: datetime, d: Decisione, inviato: bool) -> None:
         with self.lock, self.db:
             self.db.execute("INSERT INTO decisioni VALUES (?,?,?,?,?)",
@@ -74,6 +83,6 @@ class Storico:
         limite = _utc(ora - timedelta(days=giorni))
         with self.lock:
             with self.db:
-                for tabella in ("campioni", "decisioni", "temperature", "eventi"):
+                for tabella in ("campioni", "decisioni", "temperature", "pompa", "eventi"):
                     self.db.execute(f"DELETE FROM {tabella} WHERE ts < ?", (limite,))
             self.db.execute("VACUUM")
