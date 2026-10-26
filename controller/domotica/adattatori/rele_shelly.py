@@ -1,6 +1,10 @@
 """Relè Shelly Gen2 in LAN (API RPC locale) cablato su un ingresso della Maxa.
 
 Cablaggio fail-safe: relè a riposo = Maxa in Normale, relè eccitato = Boost.
+Sullo Shelly impostare "stato all'accensione: spento", così dopo un blackout la Maxa torna in Normale.
+shortcut: niente autenticazione digest; se si attiva la password sullo Shelly va aggiunta qui.
+shortcut: se il controller muore in Boost il relè resta eccitato finché il controller non riparte;
+se serve, Switch.Set accetta toggle_after e il controller dovrebbe rinnovarlo a ogni ciclo.
 """
 from datetime import datetime, timezone
 

@@ -12,7 +12,6 @@ from enum import Enum
 class Modalita(str, Enum):
     NORMALE = "normale"
     BOOST = "boost"
-    ECO = "eco"
 
 
 @dataclass(frozen=True)
@@ -40,6 +39,11 @@ class Campione:
     def scarica_kw(self) -> float:
         return max(0.0, -self.batteria_kw)
 
+    @property
+    def deficit_kw(self) -> float:
+        """Quanto la casa sta prendendo da rete e batteria insieme: in boost deve restare vicino a zero."""
+        return self.prelievo_kw + self.scarica_kw
+
 
 @dataclass(frozen=True)
 class StatoPompa:
@@ -64,5 +68,3 @@ class LetturaZona:
     ts: datetime
     zona: str
     temp_c: float
-    setpoint_c: float | None = None
-    richiesta_calore: bool | None = None

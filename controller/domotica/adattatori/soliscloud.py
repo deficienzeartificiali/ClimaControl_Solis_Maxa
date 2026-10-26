@@ -75,7 +75,8 @@ class SolisCloud:
         ts_ms = int(d.get("dataTimestamp") or 0)
         return Campione(
             ts=datetime.fromtimestamp(ts_ms / 1000, timezone.utc) if ts_ms else datetime.now(timezone.utc),
-            pv_kw=_kw(d, "pac"),
+            # pac è l'uscita AC dell'inverter (include la scarica batteria): per il PV serve dcPac.
+            pv_kw=_kw(d, "dcPac") if "dcPac" in d else _kw(d, "pac"),
             carico_kw=_kw(d, "familyLoadPower"),
             rete_kw=-rete if self.cessione_positiva else rete,
             batteria_kw=batteria if self.carica_positiva else -batteria,

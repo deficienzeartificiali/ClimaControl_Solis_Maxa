@@ -102,14 +102,17 @@ class Connessione:
             raise
 
     def invia(self, messaggio: str) -> None:
-        self.sock.sendall(messaggio.encode())
+        try:
+            self.sock.sendall(messaggio.encode())
+        except OSError as e:
+            raise ErroreAdattatore(f"OpenWebNet: invio fallito ({e})") from e
 
     def ricevi(self) -> str:
         while "##" not in self.buffer:
             try:
                 dati = self.sock.recv(1024)
-            except socket.timeout as e:
-                raise ErroreAdattatore("OpenWebNet: nessuna risposta dal gateway") from e
+            except OSError as e:  # comprende il timeout
+                raise ErroreAdattatore(f"OpenWebNet: nessuna risposta dal gateway ({e})") from e
             if not dati:
                 raise ErroreAdattatore("OpenWebNet: connessione chiusa dal gateway")
             self.buffer += dati.decode(errors="replace")
@@ -191,13 +194,22 @@ class SensoriOpenWebNet:
         ora = datetime.now(timezone.utc)
         if self._zone and self._scoperte_il and ora - self._scoperte_il < self.riscoperta:
             return self._zone
+        trovate = []
         conn = self._apri()
         try:
-            trovate = [str(z) for z in range(1, 100) if self._leggi_zona(conn, str(z)) is not None]
+            for z in range(1, 100):
+                try:
+                    if self._leggi_zona(conn, str(z)) is not None:
+                        trovate.append(str(z))
+                except ErroreAdattatore as e:
+                    # Un gateway che non risponde fermerebbe il ciclo per minuti (99 zone x timeout): si smette.
+                    log.warning("scansione zone interrotta alla zona %s: %s", z, e)
+                    break
         finally:
             conn.chiudi()
         log.info("zone BTicino trovate: %s", trovate or "nessuna")
-        self._zone, self._scoperte_il = trovate, ora
+        if trovate:  # senza zone si riprova al ciclo successivo invece di aspettare la riscoperta
+            self._zone, self._scoperte_il = trovate, ora
         return trovate
 
     def leggi(self) -> list[LetturaZona]:

@@ -20,8 +20,7 @@ class RegoleBoost:
     fascia_inizio: time = time(9, 0)
     fascia_fine: time = time(17, 0)
     pausa_dall_ultimo_cambio_min: int = 20
-    prelievo_kw: float = 0.5
-    scarica_kw: float = 1.0
+    deficit_kw: float = 0.5
     per_min: int = 10
     soc_sotto: float = 70
     dopo_le: time = time(18, 0)
@@ -58,8 +57,7 @@ def carica(percorso: Path) -> Config:
         fascia_inizio=_ora(fascia[0]),
         fascia_fine=_ora(fascia[1]),
         pausa_dall_ultimo_cambio_min=entra.get("pausa_dall_ultimo_cambio_min", 20),
-        prelievo_kw=esci.get("prelievo_kw", 0.5),
-        scarica_kw=esci.get("scarica_kw", 1.0),
+        deficit_kw=esci.get("deficit_kw", 0.5),
         per_min=esci.get("per_min", 10),
         soc_sotto=esci.get("soc_sotto", 70),
         dopo_le=_ora(esci.get("dopo_le", "18:00")),

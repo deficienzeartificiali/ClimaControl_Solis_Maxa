@@ -1,5 +1,6 @@
 """Pagina di stato in LAN sulla porta 8080 (stdlib, nessun framework)."""
 import json
+from urllib.parse import parse_qs, urlparse
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
@@ -22,8 +23,14 @@ def avvia(stato_corrente, storico, pausa, porta: int = 8080) -> ThreadingHTTPSer
                 self._json(404, {"errore": "non trovato"})
 
         def do_POST(self):
-            if self.path.startswith("/pausa"):
-                ore = float(self.path.partition("ore=")[2] or 4)
+            url = urlparse(self.path)
+            if url.path == "/pausa":
+                try:
+                    ore = float(parse_qs(url.query).get("ore", ["4"])[0])
+                except ValueError:
+                    return self._json(400, {"errore": "ore non valido"})
+                if not 0 < ore <= 72:
+                    return self._json(400, {"errore": "ore fra 0 e 72"})
                 pausa(ore)
                 self._json(200, {"pausa_ore": ore})
             else:
